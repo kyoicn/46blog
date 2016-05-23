@@ -1,5 +1,5 @@
+from ConfigParser import ConfigParser
 from datetime import datetime
-import MySQLdb
 import os
 
 class LocalSaver:
@@ -11,12 +11,23 @@ class LocalSaver:
     # File name for entry's plain text content.
     TEXT_CONTENT_FILENAME = 'text_content.txt'
 
-    def __init__(self):
-        # TODO: load from config
-        self._data_dir = 'data/'
+    def __init__(self, config = 'config.ini'):
+        try:
+            cp = ConfigParser()
+            cp.read(config)
+            self._data_dir = cp.get('General', 'data_dir') + '/'
+        except Exception as e:
+            # TODO: log.aterror
+            print 'An error occurred while loading config: ' + str(e)
+            raise
 
     """Save entry data to local machine"""
     def save(self, entry):
+        if entry.is_readonly():
+            raise Exception(
+                """
+                This entry is read-only, storing operations are not allowed.
+                """)
         try:
             # TODO: log.atfine()
             print '[{}]'.format(datetime.now()) + 'start saving to local:'
@@ -42,6 +53,8 @@ class LocalSaver:
                     + image.get_extension())
                 if LocalSaver._save_file(image_filename, image.get_content()):
                     image.set_local_url(image_filename)
+                    entry.set_image_local_url(image.get_remote_url(),
+                                              image_filename)
                     # TODO: log.atfine()
                     print '-saved to ' + image_filename
 

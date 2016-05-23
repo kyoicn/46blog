@@ -15,13 +15,18 @@ class FeedEntry:
                  publish_time, # ISO8601 date time format string
                  title = '',
                  text = '', # Plain text content, should be formatted
-                 image_remote_urls = [],
-                 image_local_urls = [],
+                 image_remote_urls = None,
+                 image_local_urls = None, # Should be a map from remote to local
                  permalink = '',
                  raw_html = '', # Raw HTML markup
                  raw_entry = None,
                  readonly = True
                  ):
+        if image_remote_urls is None:
+            image_remote_urls = []
+        if image_local_urls is None:
+            image_local_urls = {}
+
         # Basic info in plain text
         self.info = {
             'author': author.encode('utf8'),
@@ -31,19 +36,19 @@ class FeedEntry:
         
         # Basic contents in plain text
         self.content = {
+            # Plain text content, parsed from HTML
             'text': text.encode('utf8'),
+            # URL list of images in HTML
             'image_remote_urls': image_remote_urls,
-            # TODO: rethink this copy of local urls
-            'image_local_urls': image_local_urls
         }
         
-        # Fully loaded contents richer than plain text
+        # Fully loaded contents richer than plain text, loaded lazily
         self.rich_content = {
             # Datetime object
             'publish_time': dateutil.parser.parse(self.info['publish_time'])
                 .astimezone(FeedEntry.TOKYO_TZ),
-
             # List of FeedImage
+            # TODO: should be a map
             'images': []
         }
         
@@ -51,7 +56,9 @@ class FeedEntry:
         self._meta = {
             'permalink': permalink,
             'raw_html': raw_html.encode('utf8'),
-            'raw_entry': raw_entry
+            'raw_entry': raw_entry,
+            # TODO: rethink this copy of local urls
+            'image_local_urls': image_local_urls
         }
         
         # Config, make is static
@@ -68,15 +75,17 @@ class FeedEntry:
     def load_images(self):
         if self._images_loaded:
             return self
-        if len(self.content['image_local_urls']) > 0:
+        if len(self._meta['image_local_urls']) > 0:
             try:
-                # Build FeedImage from local files
+                # TODO: Build FeedImage from local files
                 self.rich_content['images'] = map(lambda f: open(f, 'r'),
-                    self.content['image_local_urls'])
+                    self._meta['image_local_urls'])
                 self._images_loaded = True
                 return self
-            except:
-                print 'Local resource does not exist'
+            except Exception as e:
+                # TODO: log.atWarning
+                print 'Error loading local resource: ' + str(e)
+                print 'Load remote resource instead'
                 pass
         self.rich_content['images'] = map(lambda f: ImgFetcher(f).fetch(),
             self.content['image_remote_urls'])
@@ -130,3 +139,10 @@ class FeedEntry:
     # Returns if this instance is read-only (cannot be stored locally)
     def is_readonly(self):
         return self._config['readonly']
+
+    """TODO: need more consideration on these setters"""
+    def set_image_local_url(self, remote, local):
+        if remote in self.content['image_remote_urls']:
+            self._meta['image_local_urls'][remote] = local
+        else:
+            raise Exception("Setting a non-existing remote image")

@@ -1,5 +1,6 @@
+from ConfigParser import ConfigParser
 from datetime import datetime
-from dbsaver import DBSaver
+# from dbsaver import DBSaver
 from feedentry import FeedEntry
 from localsaver import LocalSaver
 from lxml import html
@@ -19,32 +20,39 @@ class FeedFetcher:
         'User-Agent': 'Magic Browser'
     }
 
-    def __init__(self):
-        # TODO: load config to construct
-        self._config = {
-            'feed_url': 'http://blog.nogizaka46.com/atom.xml',
-            'cache_dir': 'cache/',
-            'cache_file_name': 'cache/cache_feed.xml',
-            'data_dir': 'data/'
-        }
+    def __init__(self, config = 'config.ini'):
+        try:
+            cp = ConfigParser()
+            cp.read(config)
+            self._config = {
+                'feed_url': cp.get('General', 'feed_url'),
+                'cache_dir': cp.get('General', 'cache_dir') + '/',
+                'cache_file_name': cp.get('General', 'cache_feed'),
+                'data_dir': cp.get('General', 'data_dir') + '/'
+            }
+        except Exception as e:
+            # TODO: log.aterror
+            print 'An error occurred while loading config: ' + str(e)
+            raise
 
         # Status
         self._status = {
             # Hashcode of last cached response
             'cache_file_hashcode':
                 self._get_file_hashcode(self._config['cache_file_name']),
-
             # Set of hashcodes of saved entries
             'saved_entries': set()
         }
 
         self._feed_req = urllib2.Request(self._config['feed_url'],
             headers = FeedFetcher.req_header_with_agent)
-        self._localsaver = LocalSaver()
-        #self._dbsaver = DBSaver()
+        self._localsaver = LocalSaver(config)
+        # self._dbsaver = DBSaver(config)
         
     """Fetches feeds and returns a list of fully loaded new FeedEntry"""
-    def fetch(self):
+    def fetch(self,
+              max_fetch = 0 # Number of entries to fetch, non-positives are ignored
+              ):
         try:
             cache_tmp = TemporaryFile()
             feed_response = urllib2.urlopen(self._feed_req)
@@ -54,7 +62,6 @@ class FeedFetcher:
             cache_tmp.close()
             print 'While fetching response: ' + str(e)
             return
-            #raise e
             
         # Compare file checksum with cached feed file, save to file if new
         # contents are available
@@ -66,7 +73,7 @@ class FeedFetcher:
             cache_tmp.close()
             return []
 
-        # TODO: log
+        # TODO: log.atfine
         print (datetime.now().strftime('[%H:%M:%S]')
             + 'feed has a new version: '
             + new_file_hashcode)
@@ -80,16 +87,30 @@ class FeedFetcher:
         # Iterate over entries and stops at last cached entry
         cache_tmp.seek(0)
         to_return = []
+        added = 0
         for entry in self._parse_tree(cache_tmp):
             # check if stored
-            if entry.hashcode() not in self._status['saved_entries']:
+            if entry.hashcode() in self._status['saved_entries']:
+                # TODO: log.atfine
+                print 'Cached entry'
+            else:
+                # TODO: log.atfine
+                print 'New entry from: ' + entry.get_author()
+
                 entry.load_images()
+                # TODO: migrate save logic to FeedEntry?
                 # LocalSaver should be executed before DBSaver, otherwise the
                 # image entries inserted would miss local_url field
-                if self._localsaver.save(entry): # and self._dbsaver.save(entry):
+                if self._localsaver.save(entry):
+                # and self._dbsaver.save(entry):
                     self._status['saved_entries'].add(entry.hashcode())
+                    to_return.append(entry)
+                    added += 1
+                    if max_fetch > 0 and added >= max_fetch:
+                        break
 
         cache_tmp.close()
+        # Should return immutable entries
         return to_return
 
     """Returns MD5 string of the given file object or file name"""
