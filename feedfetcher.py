@@ -55,7 +55,7 @@ class FeedFetcher:
               ):
         try:
             cache_tmp = TemporaryFile()
-            feed_response = urllib2.urlopen(self._feed_req)
+            feed_response = urllib2.urlopen(self._feed_req, timeout = 60)
             cache_tmp.write(feed_response.read())
             cache_tmp.seek(0)
         except Exception as e:
