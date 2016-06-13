@@ -1,6 +1,7 @@
 # -*- coding: utf-8
 from ConfigParser import ConfigParser
 import tweepy
+import os
 
 class TwitterBot:
     """Just tweet!
@@ -34,15 +35,18 @@ class TwitterBot:
         # Cannot include more than 4 images or 1 gif
         print 'start uploading'
 
+        # TODO: reduce
         image_ids = map(
             lambda m: m.media_id,
             map(
                 self._api.media_upload,
-                map(
-                    lambda i: i.get_local_url(),
-                    filter(
-                        lambda i: i.get_extension() != '.gif',
-                        entry.get_images())[:4])))
+                filter(
+                    lambda i: os.stat(i).st_size <= 3000000,
+                    map(
+                        lambda i: i.get_local_url(),
+                        filter(
+                            lambda i: i.get_extension() != '.gif',
+                            entry.get_images())))[:4]))
         return self._api.update_status(status = text,
                                        media_ids = image_ids)
 

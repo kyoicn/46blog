@@ -28,7 +28,7 @@ class FeedFetcher:
                 'feed_url': cp.get('General', 'feed_url'),
                 'cache_dir': cp.get('General', 'cache_dir') + '/',
                 'cache_file_name': cp.get('General', 'cache_feed'),
-                'data_dir': cp.get('General', 'data_dir') + '/'
+                'data_dir': cp.get('General', 'data_dir') + '/',
             }
         except Exception as e:
             # TODO: log.aterror
