@@ -81,7 +81,7 @@ class FeedFetcher:
         # TODO: cache hashcode should be updated only after local saving is
         # successfully performed
         self._save_feed_file(cache_tmp)
-        #self._save_cache_file(cache_tmp)
+        self._save_cache_file(cache_tmp)
         self._status['cache_file_hashcode'] = new_file_hashcode
 
         # Iterate over entries and stops at last cached entry
