@@ -5,12 +5,12 @@ import MySQLdb
 class DBSaver:
     """Talks to DB"""
 
-    def __init__(self):
+    def __init__(self, host, user, cred, db):
         # TODO: load from config
-        self._db = MySQLdb.connect(host = 'localhost',
-                                  user = 'root',
-                                  passwd = 'test',
-                                  db = 'nogizaka_blog')
+        self._db = MySQLdb.connect(host = host,
+                                  user = user,
+                                  passwd = cred,
+                                  db = db)
         self._cur = self._db.cursor()
         self._entry_table = Table('entry')
         self._member_table = Table('member')

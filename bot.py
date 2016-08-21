@@ -66,7 +66,11 @@ if args.twitter:
     tweeted = set(tweeted_file.read().split('\n'))
 
 if args.database:
-    db_saver = DBSaver()
+    host = cp.get('General', 'db_host')
+    user = cp.get('General', 'db_user')
+    cred = cp.get('General', 'db_cred')
+    db = cp.get('General', 'db_name')
+    db_saver = DBSaver(host, user, cred, db)
 
 while True:
     try:
