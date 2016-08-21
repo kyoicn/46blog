@@ -68,7 +68,8 @@ while True:
             # DB saver
             # TODO: async
             if args.database:
-                print('save to db')
+                if args.verbose > 0:
+                    print('save to db')
 
             # Twitter bot
             # TODO: async
