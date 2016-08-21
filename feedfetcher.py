@@ -12,24 +12,28 @@ import xml.etree.ElementTree as ET
 
 class FeedFetcher:
     """Performs operations to fetch feeds.
-    Takes care of storing raw feed xml files.
+    Store raw data to local file system.
     """
 
     # Constants
     req_header_with_agent = {
-        'User-Agent': 'Magic Browser'
+        # Chrome is the best
+        'User-Agent': 'Chrome/52.0.2743.116'
     }
 
     def __init__(self, config = 'config.ini', clargs = None):
         try:
             cp = ConfigParser()
             cp.read(config)
+            # Config file options
             self._config = {
                 'feed_url': cp.get('General', 'feed_url'),
                 'cache_dir': cp.get('General', 'cache_dir') + '/',
                 'cache_file_name': cp.get('General', 'cache_feed'),
                 'data_dir': cp.get('General', 'data_dir') + '/',
             }
+            # Command line arguments
+            self._clargs = clargs
         except Exception as e:
             # TODO: log.aterror
             print 'An error occurred while loading config: ' + str(e)
@@ -44,10 +48,10 @@ class FeedFetcher:
             'saved_entries': set()
         }
 
-        self._feed_req = urllib2.Request(self._config['feed_url'],
+        self._feed_req = urllib2.Request(
+            self._config['feed_url'],
             headers = FeedFetcher.req_header_with_agent)
         self._localsaver = LocalSaver(config)
-        # self._dbsaver = DBSaver(config)
         
     """Fetches feeds and returns a list of fully loaded new FeedEntry"""
     def fetch(self,
@@ -66,7 +70,8 @@ class FeedFetcher:
         # Compare file checksum with cached feed file, save to file if new
         # contents are available
         new_file_hashcode = self._get_file_hashcode(cache_tmp)
-        if new_file_hashcode == self._status['cache_file_hashcode']:
+        if (not self._clargs.no_cache and
+            new_file_hashcode == self._status['cache_file_hashcode']):
             # TODO: log.atfine()
             print (datetime.now().strftime('[%H:%M:%S]')
                 + 'old version, pass')
@@ -81,8 +86,9 @@ class FeedFetcher:
         # TODO: cache hashcode should be updated only after local saving is
         # successfully performed
         self._save_feed_file(cache_tmp)
-        self._save_cache_file(cache_tmp)
-        self._status['cache_file_hashcode'] = new_file_hashcode
+        if not self._clargs.no_cache:
+            self._save_cache_file(cache_tmp)
+            self._status['cache_file_hashcode'] = new_file_hashcode
 
         # Iterate over entries and stops at last cached entry
         cache_tmp.seek(0)
@@ -90,24 +96,24 @@ class FeedFetcher:
         added = 0
         for entry in self._parse_tree(cache_tmp):
             # check if stored
-            if entry.hashcode() in self._status['saved_entries']:
+            if (not self._clargs.no_cache and
+                entry.hashcode() in self._status['saved_entries']):
                 # TODO: log.atfine
                 print 'Cached entry'
-            else:
-                # TODO: log.atfine
-                print 'New entry from: ' + entry.get_author()
+                continue
 
-                entry.load_images()
-                # TODO: migrate save logic to FeedEntry?
-                # LocalSaver should be executed before DBSaver, otherwise the
-                # image entries inserted would miss local_url field
-                if self._localsaver.save(entry):
-                # and self._dbsaver.save(entry):
+            # TODO: log.atfine
+            print 'New entry from: ' + entry.get_author()
+
+            entry.load_images()
+
+            if self._localsaver.save(entry):
+                if not self._clargs.no_cache:
                     self._status['saved_entries'].add(entry.hashcode())
-                    to_return.append(entry)
-                    added += 1
-                    if max_fetch > 0 and added >= max_fetch:
-                        break
+                to_return.append(entry)
+                added += 1
+                if max_fetch > 0 and added >= max_fetch:
+                    break
 
         cache_tmp.close()
         # Should return immutable entries
