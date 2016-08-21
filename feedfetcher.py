@@ -20,7 +20,7 @@ class FeedFetcher:
         'User-Agent': 'Magic Browser'
     }
 
-    def __init__(self, config = 'config.ini'):
+    def __init__(self, config = 'config.ini', clargs = None):
         try:
             cp = ConfigParser()
             cp.read(config)
