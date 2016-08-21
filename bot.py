@@ -21,7 +21,8 @@ argparser.add_argument(
 argparser.add_argument(
     '-f', '--no_cache',
     action = 'store_true',
-    help = 'disable caching, all fetches are considered as new')
+    help = '''disable comparing with cached feed,
+              all fetches are considered as new''')
 argparser.add_argument(
     '-t', '--twitter',
     action = 'store_true',
@@ -37,6 +38,13 @@ argparser.add_argument(
     default = 60,
     help = 'interval in seconds between two rounds of fetches, default 60s')
 argparser.add_argument(
+    '-m', '--max_fetch',
+    action = 'store',
+    type = int,
+    default = 0,
+    help = '''max number of blog posts to fetch in each round,
+              if set to non-positive then unlimited''')
+argparser.add_argument(
     '-c', '--config_file',
     action = 'store',
     type = str,
@@ -50,7 +58,7 @@ if args.verbose > 0:
 cp = ConfigParser()
 cp.read(args.config_file)
 
-fetcher = FeedFetcher(args.config_file)
+fetcher = FeedFetcher(args.config_file, args)
 
 if args.twitter:
     twitter_bot = TwitterBot(args.config_file)
@@ -62,7 +70,7 @@ if args.database:
 
 while True:
     try:
-        for entry in reversed(fetcher.fetch()):
+        for entry in reversed(fetcher.fetch(max_fetch = args.max_fetch)):
             # Main loop
 
             # DB saver
