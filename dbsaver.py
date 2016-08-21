@@ -24,10 +24,11 @@ class DBSaver:
             print '[{}]'.format(datetime.now()) + 'start saving to db:'
 
             insert = self._insert_entry_sql(entry)
-            #self._cur.execute(insert[0], insert[1])
+            # print(insert)
+            self._cur.execute(insert[0], insert[1])
 
             insert = self._insert_image_sql(entry)
-            print insert
+            # print insert
             self._cur.executemany(insert[0], insert[1])
 
             return True

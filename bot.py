@@ -72,47 +72,49 @@ if args.database:
     db = cp.get('General', 'db_name')
     db_saver = DBSaver(host, user, cred, db)
 
-while True:
-    try:
-        for entry in reversed(fetcher.fetch(max_fetch = args.max_fetch)):
-            # Main loop
+try:
+    while True:
+        try:
+            for entry in reversed(fetcher.fetch(max_fetch = args.max_fetch)):
+                # Main loop
 
-            # DB saver
-            # TODO: async
-            if args.database:
-                if args.verbose > 0:
-                    print('save to db')
+                # DB saver
+                # TODO: async
+                if args.database:
+                    if args.verbose > 0:
+                        print('save to db')
+                    db_saver.save(entry)
 
-            # Twitter bot
-            # TODO: async
-            if args.twitter:
-                if entry.hashcode() not in tweeted:
-                    twitter_bot.tweet(entry)
-                    tweeted.add(entry.hashcode())
-                    tweeted_file.write('{}\n'.format(entry.hashcode()))
-                    print('tweeted: {0}/{1}'.format(
-                        entry.get_author(),
-                        entry.get_title()))
+                # Twitter bot
+                # TODO: async
+                if args.twitter:
+                    if entry.hashcode() not in tweeted:
+                        twitter_bot.tweet(entry)
+                        tweeted.add(entry.hashcode())
+                        tweeted_file.write('{}\n'.format(entry.hashcode()))
+                        print('tweeted: {0}/{1}'.format(
+                            entry.get_author(),
+                            entry.get_title()))
+
+        except Exception as e:
+            print(str(e))
 
         time.sleep(args.interval)
 
-    except KeyboardInterrupt:
+except KeyboardInterrupt:
+    if args.verbose > 0:
+        print('Keyboard Interrupt: clean up')
+    if args.twitter:
         if args.verbose > 0:
-            print('Keyboard Interrupt: clean up')
-        if args.twitter:
-            if args.verbose > 0:
-                print('...closing tweeted_file', end = '')
-            tweeted_file.close()
-            if args.verbose > 0:
-                print('[OK]')
-        if args.database:
-            if args.verbose > 0:
-                print('...closing db connection', end='')
-            # close connection
-            if args.verbose > 0:
-                print('[OK]')
+            print('...closing tweeted_file', end = '')
+        tweeted_file.close()
+        if args.verbose > 0:
+            print('[OK]')
+    if args.database:
+        if args.verbose > 0:
+            print('...closing db connection', end='')
+        # close connection
+        if args.verbose > 0:
+            print('[OK]')
 
-        sys.exit('The bot is terminated by you.')
-
-    except Exception as e:
-        print(str(e))
+    sys.exit('The bot is terminated by you.')
