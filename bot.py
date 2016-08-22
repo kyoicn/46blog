@@ -82,7 +82,8 @@ try:
                 # TODO: async
                 if args.database:
                     if args.verbose > 0:
-                        print('save to db')
+                        print('Saving to db: {}/{}'.format(
+                            entry.get_author(), entry.get_title()))
                     db_saver.save(entry)
 
                 # Twitter bot

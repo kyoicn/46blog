@@ -21,7 +21,7 @@ class DBSaver:
 
     """Save entry data to database"""
     def save(self, entry):
-        # try:
+        try:
             # TODO: log.atfine()
             print '[{}]'.format(datetime.now()) + 'start saving to db:'
 
@@ -34,13 +34,11 @@ class DBSaver:
             cur.execute(sql_insert_image)
             cur.execute(sql_insert_entry)
             
-            self._conn.commit()
+            # self._conn.commit()
 
-            return True
-        # except Exception as e:
-        #     # TODO: log
-        #     print str(e)
-        #     return False
+        except Exception as e:
+            # TODO: log
+            print str(e)
 
     def _insert_entry_sql(self, entry):
         if entry.is_readonly():
@@ -65,6 +63,7 @@ class DBSaver:
                 entry.get_permalink(),
                 entry.get_html())
 
+        print(entry.hashcode())
         return sql
 
     def _insert_image_sql(self, entry):
@@ -83,8 +82,8 @@ class DBSaver:
                 image.get_remote_url(False),
                 image.get_local_url(),
                 binascii.b2a_hex(image.get_content()),
-                # image.get_content(),
                 image.get_extension())
+            print(image.hashcode())
 
         sql = '''
             INSERT INTO image (id, entry_id, remote_url, remote_url_2,
