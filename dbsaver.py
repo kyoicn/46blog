@@ -26,15 +26,23 @@ class DBSaver:
             print '[{}]'.format(datetime.now()) + 'start saving to db:'
 
             sql_insert_entry = self._insert_entry_sql(entry)
-            print(sql_insert_entry[:100])
-            sql_insert_image = self._insert_image_sql(entry)
-            print(sql_insert_image[:100])
+            print(sql_insert_entry[:200])
+            cur = self._conn.cursor()
+            cur.execute(sql_insert_entry)
+            self._conn.commit()
+            cur.close()
 
             cur = self._conn.cursor()
+            cur.execute(DBSaver._get_entry_id(entry.hashcode()))
+            entry_id = cur.fetchone()[0]
+            cur.close()
+
+            sql_insert_image = self._insert_image_sql(entry, entry_id)
+            print(sql_insert_image[:100])
+            cur = self._conn.cursor()
             cur.execute(sql_insert_image)
-            cur.execute(sql_insert_entry)
-            
-            # self._conn.commit()
+            self._conn.commit()
+            cur.close()
 
         except Exception as e:
             # TODO: log
@@ -48,11 +56,14 @@ class DBSaver:
                 """)
 
         # TODO: check if exist already
-        # TODO: query author id
-        author_id = 1
-        sql = '''
-            INSERT INTO entry (id, publish_time, author_id, author_name,
-            title, text, permalink, raw_html)
+        
+        cur = self._conn.cursor()
+        cur.execute(DBSaver._get_author_id(entry.get_author()))
+        author_id = cur.fetchone()[0]
+        cur.close()
+
+        sql = '''INSERT INTO entry (hashcode, publish_time, author_id,
+            author_name, title, text, permalink, raw_html)
             VALUES('{}', {}, {}, '{}', '{}', '{}', '{}', '{}')'''.format(
                 entry.hashcode(),
                 calendar.timegm(entry.get_time().timetuple()),
@@ -64,9 +75,9 @@ class DBSaver:
                 entry.get_html())
 
         print(entry.hashcode())
-        return sql
+        return sql.strip()
 
-    def _insert_image_sql(self, entry):
+    def _insert_image_sql(self, entry, entry_id):
         if entry.is_readonly():
             raise Exception(
                 """
@@ -77,7 +88,7 @@ class DBSaver:
         for image in entry.get_images():
             values += "('{}', '{}', '{}', '{}', '{}', 0x{}, '{}'),".format(
                 image.hashcode(),
-                entry.hashcode(),
+                entry_id,
                 image.get_remote_url(),
                 image.get_remote_url(False),
                 image.get_local_url(),
@@ -85,9 +96,18 @@ class DBSaver:
                 image.get_extension())
             print(image.hashcode())
 
-        sql = '''
-            INSERT INTO image (id, entry_id, remote_url, remote_url_2,
-            local_url, content, extension)
+        sql = '''INSERT INTO image (hashcode, entry_id, remote_url,
+            remote_url_2, local_url, content, extension)
             VALUES {}'''.format(values[:-1])
 
-        return sql
+        return sql.strip()
+
+    @staticmethod
+    def _get_entry_id(hashcode):
+        sql = 'SELECT id FROM entry WHERE hashcode="{}"'.format(hashcode)
+        return sql.strip()
+
+    @staticmethod
+    def _get_author_id(name):
+        sql = 'SELECT id FROM member WHERE name="{}"'.format(name)
+        return sql.strip()
