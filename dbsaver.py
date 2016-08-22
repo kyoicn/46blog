@@ -74,7 +74,6 @@ class DBSaver:
                 entry.get_permalink(),
                 entry.get_html())
 
-        print(entry.hashcode())
         return sql.strip()
 
     def _insert_image_sql(self, entry, entry_id):
@@ -94,7 +93,6 @@ class DBSaver:
                 image.get_local_url(),
                 binascii.b2a_hex(image.get_content()),
                 image.get_extension())
-            print(image.hashcode())
 
         sql = '''INSERT INTO image (hashcode, entry_id, remote_url,
             remote_url_2, local_url, content, extension)
