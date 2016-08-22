@@ -1,5 +1,6 @@
 from datetime import datetime
-from sql import *
+import binascii
+import calendar
 import MySQLdb
 
 class DBSaver:
@@ -7,15 +8,16 @@ class DBSaver:
 
     def __init__(self, host, user, cred, db):
         # TODO: load from config
-        self._db = MySQLdb.connect(host = host,
-                                  user = user,
-                                  passwd = cred,
-                                  db = db)
-        self._cur = self._db.cursor()
-        self._entry_table = Table('entry')
-        self._member_table = Table('member')
-        self._image_table = Table('image')
+        self._conn = MySQLdb.connect(
+            use_unicode = True,
+            host = host,
+            user = user,
+            passwd = cred,
+            db = db)
         # TODO: load necessary db data, e.g. member names
+
+    def terminate(self):
+        self._conn.close();
 
     """Save entry data to database"""
     def save(self, entry):
@@ -23,13 +25,16 @@ class DBSaver:
             # TODO: log.atfine()
             print '[{}]'.format(datetime.now()) + 'start saving to db:'
 
-            insert = self._insert_entry_sql(entry)
-            # print(insert)
-            self._cur.execute(insert[0], insert[1])
+            sql_insert_entry = self._insert_entry_sql(entry)
+            print(sql_insert_entry[:100])
+            sql_insert_image = self._insert_image_sql(entry)
+            print(sql_insert_image[:100])
 
-            insert = self._insert_image_sql(entry)
-            # print insert
-            self._cur.executemany(insert[0], insert[1])
+            cur = self._conn.cursor()
+            cur.execute(sql_insert_image)
+            cur.execute(sql_insert_entry)
+            
+            self._conn.commit()
 
             return True
         # except Exception as e:
@@ -43,30 +48,24 @@ class DBSaver:
                 """
                 This entry is read-only, storing operations are not allowed.
                 """)
-        # TODO: load columns from config, and use map() here
-        columns = [
-            self._entry_table.id,
-            self._entry_table.publish_time,
-            self._entry_table.author_id,
-            self._entry_table.author_name,
-            self._entry_table.title,
-            self._entry_table.text,
-            self._entry_table.permalink,
-            self._entry_table.raw_html,
-        ]
-        values = [[
-            entry.hashcode(),
-            entry.get_time_str(),
-            #self._name_id_map[entry.get_author()],
-            1,
-            entry.get_author(),
-            entry.get_title(),
-            entry.get_text(),
-            entry.get_permalink(),
-            entry.get_html()
-        ]]
-        return tuple(self._entry_table.insert(columns = columns,
-                                              values = values))
+
+        # TODO: check if exist already
+        # TODO: query author id
+        author_id = 1
+        sql = '''
+            INSERT INTO entry (id, publish_time, author_id, author_name,
+            title, text, permalink, raw_html)
+            VALUES('{}', {}, {}, '{}', '{}', '{}', '{}', '{}')'''.format(
+                entry.hashcode(),
+                calendar.timegm(entry.get_time().timetuple()),
+                author_id,
+                entry.get_author(),
+                entry.get_title(),
+                entry.get_text(),
+                entry.get_permalink(),
+                entry.get_html())
+
+        return sql
 
     def _insert_image_sql(self, entry):
         if entry.is_readonly():
@@ -74,27 +73,22 @@ class DBSaver:
                 """
                 This entry is read-only, storing operations are not allowed.
                 """)
-        # TODO: load columns from config, and use map() here
-        columns = [
-            self._image_table.id,
-            self._image_table.entry_id,
-            self._image_table.remote_url,
-            self._image_table.remote_url_2,
-            self._image_table.local_url,
-            self._image_table.content,
-            self._image_table.extension
-        ]
-        values = []
+
+        values = ''
         for image in entry.get_images():
-            values.append([
+            values += "('{}', '{}', '{}', '{}', '{}', 0x{}, '{}'),".format(
                 image.hashcode(),
                 entry.hashcode(),
                 image.get_remote_url(),
                 image.get_remote_url(False),
                 image.get_local_url(),
+                binascii.b2a_hex(image.get_content()),
                 # image.get_content(),
-                '',
-                image.get_extension()
-            ])
-        return tuple(self._image_table.insert(columns = columns,
-                                              values = values))
+                image.get_extension())
+
+        sql = '''
+            INSERT INTO image (id, entry_id, remote_url, remote_url_2,
+            local_url, content, extension)
+            VALUES {}'''.format(values[:-1])
+
+        return sql

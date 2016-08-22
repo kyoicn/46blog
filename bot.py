@@ -113,7 +113,7 @@ except KeyboardInterrupt:
     if args.database:
         if args.verbose > 0:
             print('...closing db connection', end='')
-        # close connection
+        db_saver.terminate()
         if args.verbose > 0:
             print('[OK]')
 
