@@ -34,28 +34,23 @@ class DBSaver:
         # TODO: log.atfine()
         print '[{}]'.format(datetime.now()) + 'start saving to db:'
         try:
-            conn = self.connect()
-
             sql_insert_entry = self._insert_entry_sql(entry)
             print(sql_insert_entry[:200])
-            cur = conn.cursor()
-            cur.execute(sql_insert_entry)
-            # self._conn.commit()
+            with self.connect() as cur:
+                cur.execute(sql_insert_entry)
             cur.close()
+            del cur
 
             sql_insert_image = self._insert_image_sql(entry)
             print(sql_insert_image[:100])
-            cur = conn.cursor()
-            cur.execute(sql_insert_image)
-            # self._conn.commit()
+            with self.connect() as cur:
+                cur.execute(sql_insert_image)
             cur.close()
+            del cur
 
         except Exception as e:
             # TODO: log
             print str(e)
-
-        finally:
-            conn.close()
 
     def _insert_entry_sql(self, entry):
         if entry.is_readonly():
@@ -65,13 +60,11 @@ class DBSaver:
                 """)
 
         # TODO: check if exist already
-        
-        conn = self.connect()
-        cur = conn.cursor()
-        cur.execute(DBSaver._get_author_id(entry.get_author()))
-        author_id = cur.fetchone()[0]
+        with self.connect() as cur:
+            cur.execute(DBSaver._get_author_id(entry.get_author()))
+            author_id = cur.fetchone()[0]
         cur.close()
-        conn.close()
+        del cur
 
         sql = '''INSERT INTO entry (hashcode, publish_time, author_id,
             author_name, title, text, permalink, raw_html)
@@ -94,12 +87,11 @@ class DBSaver:
                 This entry is read-only, storing operations are not allowed.
                 """)
 
-        conn = self.connect()
-        cur = conn.cursor()
-        cur.execute(DBSaver._get_entry_id(entry.hashcode()))
-        entry_id = cur.fetchone()[0]
+        with self.connect() as cur:
+            cur.execute(DBSaver._get_entry_id(entry.hashcode()))
+            entry_id = cur.fetchone()[0]
         cur.close()
-        conn.close()
+        del cur
 
         values = ''
         for image in entry.get_images():
