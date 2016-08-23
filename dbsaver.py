@@ -8,45 +8,54 @@ class DBSaver:
 
     def __init__(self, host, user, cred, db):
         # TODO: load from config
-        self._conn = MySQLdb.connect(
-            use_unicode = True,
-            host = host,
-            user = user,
-            passwd = cred,
-            db = db)
+        self._host = host
+        self._user = user
+        self._cred = cred
+        self._db = db
         # TODO: load necessary db data, e.g. member names
 
+    def connect(self):
+        c = MySQLdb.connect(
+            use_unicode = True,
+            connect_timeout = 0,
+            host = self._host,
+            user = self._user,
+            passwd = self._cred,
+            db = self._db)
+        c.autocommit(True)
+        return c
+
     def terminate(self):
-        self._conn.close();
+        # self._conn.close();
+        return
 
     """Save entry data to database"""
     def save(self, entry):
+        # TODO: log.atfine()
+        print '[{}]'.format(datetime.now()) + 'start saving to db:'
         try:
-            # TODO: log.atfine()
-            print '[{}]'.format(datetime.now()) + 'start saving to db:'
+            conn = self.connect()
 
             sql_insert_entry = self._insert_entry_sql(entry)
             print(sql_insert_entry[:200])
-            cur = self._conn.cursor()
+            cur = conn.cursor()
             cur.execute(sql_insert_entry)
-            self._conn.commit()
+            # self._conn.commit()
             cur.close()
 
-            cur = self._conn.cursor()
-            cur.execute(DBSaver._get_entry_id(entry.hashcode()))
-            entry_id = cur.fetchone()[0]
-            cur.close()
-
-            sql_insert_image = self._insert_image_sql(entry, entry_id)
+            sql_insert_image = self._insert_image_sql(entry)
             print(sql_insert_image[:100])
-            cur = self._conn.cursor()
+            cur = conn.cursor()
             cur.execute(sql_insert_image)
-            self._conn.commit()
+            # self._conn.commit()
             cur.close()
 
         except Exception as e:
             # TODO: log
             print str(e)
+
+        finally:
+            conn.close()
 
     def _insert_entry_sql(self, entry):
         if entry.is_readonly():
@@ -57,10 +66,12 @@ class DBSaver:
 
         # TODO: check if exist already
         
-        cur = self._conn.cursor()
+        conn = self.connect()
+        cur = conn.cursor()
         cur.execute(DBSaver._get_author_id(entry.get_author()))
         author_id = cur.fetchone()[0]
         cur.close()
+        conn.close()
 
         sql = '''INSERT INTO entry (hashcode, publish_time, author_id,
             author_name, title, text, permalink, raw_html)
@@ -76,12 +87,19 @@ class DBSaver:
 
         return sql.strip()
 
-    def _insert_image_sql(self, entry, entry_id):
+    def _insert_image_sql(self, entry):
         if entry.is_readonly():
             raise Exception(
                 """
                 This entry is read-only, storing operations are not allowed.
                 """)
+
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(DBSaver._get_entry_id(entry.hashcode()))
+        entry_id = cur.fetchone()[0]
+        cur.close()
+        conn.close()
 
         values = ''
         for image in entry.get_images():
