@@ -50,6 +50,11 @@ class TwitterBot:
         return self._api.update_status(status = text,
                                        media_ids = image_ids)
 
+    @staticmethod
+    def prepare(entry):
+        # return a list of prepared tweets, including text and pics
+        return
+
     def _format_text(self, author = '', title = '', text = ''):
         # TODO: move 140 to config and deal with the last emis
         text = '#{0}「{1}」:{2}'.format(author, title, text)[:140]
@@ -58,3 +63,11 @@ class TwitterBot:
             text,
             'utf8',
             errors = 'ignore').encode('utf8')
+
+    class Tweet:
+        """A tweet post struct
+        """
+
+        def __init__(self, text = None, pics = None):
+            self.text = text
+            self.pics = pics
