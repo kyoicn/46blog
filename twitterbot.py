@@ -1,5 +1,6 @@
 # -*- coding: utf-8
 from ConfigParser import ConfigParser
+import math
 import tweepy
 import os
 
@@ -27,34 +28,79 @@ class TwitterBot:
     """Tweeeeeeeeeet
     """
     def tweet(self, entry):
+        tweets = self.prepare(entry)
         # TODO: log.atfine
-        text = self._format_text(entry.get_author(),
-                                 entry.get_title(),
-                                 entry.get_text())
-        # TODO: log.atfine
-        # Cannot include more than 4 images or 1 gif
-        print 'start uploading'
+        print 'Start tweeting ' + str(len(tweets)) + ' tweets:'
+        for tweet in tweets:
+            print(tweet)
+            self._api.update_status(
+                status = tweet["text"],
+                media_ids = tweet["image_ids"])
 
-        # TODO: reduce
+    def prepare(self, entry):
+        # Cannot include more than 4 images or 1 gif
+        # return a list of prepared tweets, including text and pics
+        images_to_upload = filter(
+            # TODO: handle oversize images
+            lambda i: os.stat(i).st_size <= 3000000,
+            map(
+                lambda i: i.get_local_url(),
+                filter(
+                    lambda i: i.get_extension() != '.gif',
+                    entry.get_images())))
+        print 'Uploading ' + str(len(images_to_upload)) + ' images'
         image_ids = map(
             lambda m: m.media_id,
-            map(
-                self._api.media_upload,
-                filter(
-                    lambda i: os.stat(i).st_size <= 3000000,
-                    map(
-                        lambda i: i.get_local_url(),
-                        filter(
-                            lambda i: i.get_extension() != '.gif',
-                            entry.get_images())))[:4]))
-        return self._api.update_status(status = text,
-                                       media_ids = image_ids)
+            map(self._api.media_upload, images_to_upload))
 
-    def _format_text(self, author = '', title = '', text = ''):
-        # TODO: move 140 to config and deal with the last emis
-        text = '#{0}「{1}」:{2}'.format(author, title, text)[:140]
-        text += ' #乃木坂46'
-        return unicode(
-            text,
-            'utf8',
-            errors = 'ignore').encode('utf8')
+        tweets = []
+        n = len(image_ids)
+        count = int(math.ceil(1.0 * n / 4))
+        idx = 1
+        while n > 0:
+            print count
+            print idx
+            tweet = {
+                "text": TwitterBot._format_text(entry, count, idx),
+                "image_ids": image_ids[(idx - 1) * 4:idx * 4]
+            }
+            tweets.append(tweet)
+            n -= 4
+            idx += 1
+
+        return tweets
+
+    @staticmethod
+    def _format_text(entry=None, count=1, idx=1):
+        # PATTERN: #乃木坂46 #$AUTHOR「$TITLE」：$CONTENT… $LINK[ $IDX/$COUNT]
+        author = unicode(entry.get_author(), 'utf8')
+        title = unicode(entry.get_title(), 'utf8')
+        link = unicode(entry.get_permalink(), 'utf8')
+        content = unicode(entry.get_text(), 'utf8')
+
+        author_length = len(author)
+        title_length = len(title)
+        content_length = len(content)
+        link_length = len(link)
+
+        pattern = u'#乃木坂46 #{0}「{1}」：{2} {3}'.format
+        counter_pattern = u''.format
+        reserved_length = 12 + link_length
+        if count > 1:
+            counter_pattern = u' {0}/{1}'.format
+            reserved_length += 6 # Extra counter reserves 6 chars
+
+        # Prepare title
+        space_for_title = 140 - reserved_length - author_length
+        if title_length > space_for_title:
+            title = title[0:space_for_title - 1] + u'…'
+            title_length = len(title)
+
+        # Prepare content
+        space_for_content = 140 - reserved_length - author_length - title_length
+        if content_length > space_for_content:
+            content = content[0:space_for_content - 1] + u'…'
+
+        text = (pattern(author, title, content, link)
+            + counter_pattern(idx, count))
+        return text.encode('utf8')
