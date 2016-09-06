@@ -88,22 +88,19 @@ class TwitterBot:
         reserved_length = 12 + link_length
         if count > 1:
             counter_pattern = u' {0}/{1}'.format
-            reserved_length += 6
+            reserved_length += 6 # Extra counter reserves 6 chars
 
+        # Prepare title
         space_for_title = 140 - reserved_length - author_length
-        print reserved_length
-        print space_for_title
-        print title_length
         if title_length > space_for_title:
             title = title[0:space_for_title - 1] + u'…'
             title_length = len(title)
+
+        # Prepare content
         space_for_content = 140 - reserved_length - author_length - title_length
-        print space_for_content
-        print content_length
         if content_length > space_for_content:
             content = content[0:space_for_content - 1] + u'…'
-        print content
+
         text = (pattern(author, title, content, link)
             + counter_pattern(idx, count))
-        print text
         return text.encode('utf8')
