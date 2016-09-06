@@ -73,39 +73,37 @@ class TwitterBot:
     @staticmethod
     def _format_text(entry=None, count=1, idx=1):
         # PATTERN: #乃木坂46 #$AUTHOR「$TITLE」：$CONTENT… $LINK[ $IDX/$COUNT]
-        author = entry.get_author()
-        title = entry.get_title()
-        link = entry.get_permalink()
-        content = entry.get_text()
+        author = unicode(entry.get_author(), 'utf8')
+        title = unicode(entry.get_title(), 'utf8')
+        link = unicode(entry.get_permalink(), 'utf8')
+        content = unicode(entry.get_text(), 'utf8')
 
         author_length = len(author)
         title_length = len(title)
         content_length = len(content)
+        link_length = len(link)
 
-        pattern = '#乃木坂46 #{0}「{1}」：{2} {3}'.format
-        counter_pattern = ''.format
-        reserved_length = 35
+        pattern = u'#乃木坂46 #{0}「{1}」：{2} {3}'.format
+        counter_pattern = u''.format
+        reserved_length = 12 + link_length
         if count > 1:
-            counter_pattern = ' {0}/{1}'.format
-            reserved_length = 41
+            counter_pattern = u' {0}/{1}'.format
+            reserved_length += 6
 
         space_for_title = 140 - reserved_length - author_length
         print reserved_length
         print space_for_title
         print title_length
         if title_length > space_for_title:
-            title = title[0:space_for_title] + '…'
+            title = title[0:space_for_title - 1] + u'…'
             title_length = len(title)
         space_for_content = 140 - reserved_length - author_length - title_length
         print space_for_content
         print content_length
         if content_length > space_for_content:
-            content = content[0:space_for_content] + '…'
+            content = content[0:space_for_content - 1] + u'…'
         print content
         text = (pattern(author, title, content, link)
             + counter_pattern(idx, count))
         print text
-        return unicode(
-            text,
-            'utf8',
-            errors = 'ignore').encode('utf8')
+        return text.encode('utf8')
