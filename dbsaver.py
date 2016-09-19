@@ -18,12 +18,13 @@ class DBSaver:
 
     def connect(self):
         c = MySQLdb.connect(
-            use_unicode = True,
-            connect_timeout = 0,
-            host = self._host,
-            user = self._user,
-            passwd = self._cred,
-            db = self._db)
+            charset='utf8',
+            use_unicode=True,
+            connect_timeout=0,
+            host=self._host,
+            user=self._user,
+            passwd=self._cred,
+            db=self._db)
         c.autocommit(True)
         return c
 
@@ -158,5 +159,4 @@ class DBSaver:
     @staticmethod
     def _get_author_id(name):
         sql = 'SELECT id FROM member WHERE name="{}"'.format(name)
-        print(sql)
         return sql.strip()
