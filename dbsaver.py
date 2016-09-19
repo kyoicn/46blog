@@ -158,4 +158,5 @@ class DBSaver:
     @staticmethod
     def _get_author_id(name):
         sql = 'SELECT id FROM member WHERE name="{}"'.format(name)
+        print(sql)
         return sql.strip()
