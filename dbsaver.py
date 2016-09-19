@@ -18,12 +18,13 @@ class DBSaver:
 
     def connect(self):
         c = MySQLdb.connect(
-            use_unicode = True,
-            connect_timeout = 0,
-            host = self._host,
-            user = self._user,
-            passwd = self._cred,
-            db = self._db)
+            charset='utf8',
+            use_unicode=True,
+            connect_timeout=0,
+            host=self._host,
+            user=self._user,
+            passwd=self._cred,
+            db=self._db)
         c.autocommit(True)
         return c
 
