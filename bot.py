@@ -61,16 +61,18 @@ cp.read(args.config_file)
 fetcher = FeedFetcher(args.config_file, args)
 
 if args.twitter:
+    # TODO: pass in all args
     twitter_bot = TwitterBot(args.config_file)
     tweeted_file = open(cp.get('General', 'tweeted'), 'r+')
     tweeted = set(tweeted_file.read().split('\n'))
 
 if args.database:
+    # TODO: params should be loaded from config file
     host = cp.get('General', 'db_host')
     user = cp.get('General', 'db_user')
     cred = cp.get('General', 'db_cred')
     db = cp.get('General', 'db_name')
-    db_saver = DBSaver(host, user, cred, db)
+    db_saver = DBSaver(host, user, cred, db, args=args)
 
 try:
     while True:
