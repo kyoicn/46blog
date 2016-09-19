@@ -8,7 +8,8 @@ class ImgFetcher:
     
     # Constant
     req_header = {
-        'User-Agent': 'Magic browser'
+        # Chrome is the best
+        'User-Agent': 'Chrome/52.0.2743.116'
     }
     # Map from image host to its specific fetching method.
     fetcher_map = {
@@ -16,12 +17,22 @@ class ImgFetcher:
         'dcimg.awalker.jp': '_fetch_awalker'
     }
     
-    def __init__(self, url, url_2 = ''):
+    def __init__(self, url, url_2 = '', referer=None, verbose=0):
+        self._verbose = verbose
         self._url = url
         self._url_2 = url_2
+        self._referer = referer
+
+        header = ImgFetcher.req_header
+        if referer:
+            header['Referer'] = referer
         self._init_req = urllib2.Request(self._url,
-                                         headers = ImgFetcher.req_header)
+                                         headers = header)
         self._host = str(self._init_req.get_host())
+        self._idstr = 'ImgFetcher|{0}|{1}'.format(url, url_2)
+        if verbose > 0:
+            # TODO: log
+            print('[{0}] Initialized'.format(self._idstr))
 
     def fetch(self):
         try:

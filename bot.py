@@ -58,7 +58,24 @@ if args.verbose > 0:
 cp = ConfigParser()
 cp.read(args.config_file)
 
-fetcher = FeedFetcher(args.config_file, args)
+feeds = map(lambda s: s.strip(), cp.get('General', 'feed_url').split(','))
+feeds_count = len(feeds)
+data_dir = cp.get('General', 'data_dir')
+cache_dir = cp.get('General', 'cache_dir')
+cache_feed = cp.get('General', 'cache_feed')
+
+fetchers = []
+for i in xrange(feeds_count):
+    # TODO: abstract fetcher_args object
+    fetchers.append(FeedFetcher(
+        feed_url=feeds[i],
+        data_dir=data_dir,
+        cache_dir=cache_dir,
+        cache_feed=cache_feed,
+        verbose=args.verbose,
+        no_cache=args.no_cache))
+if args.verbose > 2:
+    print(fetchers)
 
 if args.twitter:
     # TODO: pass in all args
@@ -67,7 +84,7 @@ if args.twitter:
     tweeted = set(tweeted_file.read().split('\n'))
 
 if args.database:
-    # TODO: params should be loaded from config file
+    # TODO: abstract db_args object
     host = cp.get('General', 'db_host')
     user = cp.get('General', 'db_user')
     cred = cp.get('General', 'db_cred')
@@ -77,9 +94,19 @@ if args.database:
 try:
     while True:
         try:
-            for entry in reversed(fetcher.fetch(max_fetch = args.max_fetch)):
-                # Main loop
+            # Main loop of a round of fetch.
+            # Multiple fetchers should be triggered in parallel, and collect
+            # their results in a channel for post-processing asynchrnously.
+            # For now, multiple fetchers are executed in blocking fashion.
+            if args.verbose > 1:
+                print('Start fetching...')
+            fresh = []
+            for fetcher in fetchers:
+                fresh += fetcher.fetch(max_fetch = args.max_fetch)
 
+            if args.verbose > 1:
+                print('Start processing...')
+            for entry in reversed(fresh):
                 # DB saver
                 # TODO: async
                 if args.database:

@@ -1,6 +1,4 @@
-from ConfigParser import ConfigParser
 from datetime import datetime
-# from dbsaver import DBSaver
 from feedentry import FeedEntry
 from localsaver import LocalSaver
 from lxml import html
@@ -21,23 +19,21 @@ class FeedFetcher:
         'User-Agent': 'Chrome/52.0.2743.116'
     }
 
-    def __init__(self, config = 'config.ini', clargs = None):
-        try:
-            cp = ConfigParser()
-            cp.read(config)
-            # Config file options
-            self._config = {
-                'feed_url': cp.get('General', 'feed_url'),
-                'cache_dir': cp.get('General', 'cache_dir') + '/',
-                'cache_file_name': cp.get('General', 'cache_feed'),
-                'data_dir': cp.get('General', 'data_dir') + '/',
-            }
-            # Command line arguments
-            self._clargs = clargs
-        except Exception as e:
-            # TODO: log.aterror
-            print 'An error occurred while loading config: ' + str(e)
-            raise
+    def __init__(self,
+                 feed_url,
+                 data_dir,
+                 cache_dir,
+                 cache_feed,
+                 verbose=0,
+                 no_cache=False):
+        self._config = {
+            'feed_url': feed_url,
+            'cache_dir': cache_dir + '/',
+            'cache_file_name': cache_feed,
+            'data_dir': data_dir + '/',
+        }
+        self._verbose = verbose
+        self._no_cache = no_cache
 
         # Status
         self._status = {
@@ -51,11 +47,16 @@ class FeedFetcher:
         self._feed_req = urllib2.Request(
             self._config['feed_url'],
             headers = FeedFetcher.req_header_with_agent)
-        self._localsaver = LocalSaver(config)
+        self._localsaver = LocalSaver(data_dir, verbose)
+
+        if self._verbose > 0:
+            # TODO: log
+            print('[FeedFetcher:{0}] Initialized'.format(feed_url))
         
     """Fetches feeds and returns a list of fully loaded new FeedEntry"""
     def fetch(self,
-              max_fetch = 0 # Number of entries to fetch, non-positives are ignored
+              max_fetch = 0 # Number of entries to fetch,
+                            # non-positives are ignored
               ):
         try:
             cache_tmp = TemporaryFile()
@@ -70,7 +71,7 @@ class FeedFetcher:
         # Compare file checksum with cached feed file, save to file if new
         # contents are available
         new_file_hashcode = self._get_file_hashcode(cache_tmp)
-        if (not self._clargs.no_cache and
+        if (not self._no_cache and
             new_file_hashcode == self._status['cache_file_hashcode']):
             # TODO: log.atfine()
             print (datetime.now().strftime('[%H:%M:%S]')
@@ -86,7 +87,7 @@ class FeedFetcher:
         # TODO: cache hashcode should be updated only after local saving is
         # successfully performed
         self._save_feed_file(cache_tmp)
-        if not self._clargs.no_cache:
+        if not self._no_cache:
             self._save_cache_file(cache_tmp)
             self._status['cache_file_hashcode'] = new_file_hashcode
 
@@ -96,7 +97,7 @@ class FeedFetcher:
         added = 0
         for entry in self._parse_tree(cache_tmp):
             # check if stored
-            if (not self._clargs.no_cache and
+            if (not self._no_cache and
                 entry.hashcode() in self._status['saved_entries']):
                 # TODO: log.atfine
                 print 'Cached entry'
@@ -105,10 +106,11 @@ class FeedFetcher:
             # TODO: log.atfine
             print 'New entry from: ' + entry.get_author()
 
-            entry.load_images()
+            entry.load_images(self._verbose)
+            print('b')
 
             if self._localsaver.save(entry):
-                if not self._clargs.no_cache:
+                if not self._no_cache:
                     self._status['saved_entries'].add(entry.hashcode())
                 to_return.append(entry)
                 added += 1
