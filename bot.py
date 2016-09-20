@@ -58,16 +58,35 @@ if args.verbose > 0:
 cp = ConfigParser()
 cp.read(args.config_file)
 
-fetcher = FeedFetcher(args.config_file, args)
+feeds = map(lambda s: s.strip(), cp.get('General', 'feed_url').split(','))
+feeds_count = len(feeds)
+data_dir = cp.get('General', 'data_dir')
+cache_dir = cp.get('General', 'cache_dir')
+cache_feed = cp.get('General', 'cache_feed')
+
+fetchers = []
+for i in xrange(feeds_count):
+    # TODO: abstract fetcher_args object
+    fetchers.append(FeedFetcher(
+        feed_url=feeds[i],
+        data_dir=data_dir,
+        cache_dir=cache_dir,
+        cache_feed=cache_feed,
+        verbose=args.verbose,
+        no_cache=args.no_cache))
+if args.verbose > 2:
+    print(fetchers)
 
 if args.twitter:
     # TODO: pass in all args
     twitter_bot = TwitterBot(args.config_file)
     tweeted_file = open(cp.get('General', 'tweeted'), 'r+')
     tweeted = set(tweeted_file.read().split('\n'))
+    if args.verbose > 2:
+        print(tweeted)
 
 if args.database:
-    # TODO: params should be loaded from config file
+    # TODO: abstract db_args object
     host = cp.get('General', 'db_host')
     user = cp.get('General', 'db_user')
     cred = cp.get('General', 'db_cred')
@@ -77,9 +96,19 @@ if args.database:
 try:
     while True:
         try:
-            for entry in reversed(fetcher.fetch(max_fetch = args.max_fetch)):
-                # Main loop
+            # Main loop of a round of fetch.
+            # Multiple fetchers should be triggered in parallel, and collect
+            # their results in a channel for post-processing asynchrnously.
+            # For now, multiple fetchers are executed in blocking fashion.
+            if args.verbose > 1:
+                print('Start fetching...')
+            fresh = []
+            for fetcher in fetchers:
+                fresh += fetcher.fetch(max_fetch = args.max_fetch)
 
+            if args.verbose > 1:
+                print('Start processing...')
+            for entry in reversed(fresh):
                 # DB saver
                 # TODO: async
                 if args.database:
@@ -91,13 +120,21 @@ try:
                 # Twitter bot
                 # TODO: async
                 if args.twitter:
+                    info_str = '{0}/{1}[{2}]'.format(
+                        entry.get_author(),
+                        entry.get_title(),
+                        entry.hashcode())
                     if entry.hashcode() not in tweeted:
+                        if args.verbose > 1:
+                            # TODO: log
+                            print('{0} is not tweeted yet'.format(info_str))
                         twitter_bot.tweet(entry)
                         tweeted.add(entry.hashcode())
                         tweeted_file.write('{}\n'.format(entry.hashcode()))
-                        print('tweeted: {0}/{1}'.format(
-                            entry.get_author(),
-                            entry.get_title()))
+                        print('tweeted: {0}'.format(info_str))
+                    else:
+                        if args.verbose > 1:
+                            print('{0} is already tweeted'.format(info_str))
 
         except Exception as e:
             print(str(e))

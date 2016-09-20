@@ -1,3 +1,4 @@
+# -*- coding: utf-8
 from hashlib import md5
 from imgfetcher import ImgFetcher
 import dateutil.parser
@@ -28,10 +29,12 @@ class FeedEntry:
             image_local_urls = {}
 
         # Basic info in plain text
+        print(author)
         self.info = {
             'author': author.encode('utf8'),
+            'is_staff': True if unicode(author) == u'運営スタッフ' else False,
             'title': title.encode('utf8'),
-            'publish_time': publish_time
+            'publish_time': publish_time,
         }
         
         # Basic contents in plain text
@@ -72,7 +75,7 @@ class FeedEntry:
 
     """Loads images locally or remotely"""
     # TODO: load images in parellel
-    def load_images(self):
+    def load_images(self, verbose=0):
         if self._images_loaded:
             return self
         if len(self._meta['image_local_urls']) > 0:
@@ -87,8 +90,10 @@ class FeedEntry:
                 print 'Error loading local resource: ' + str(e)
                 print 'Load remote resource instead'
                 pass
-        self.rich_content['images'] = map(lambda f: ImgFetcher(f).fetch(),
-            self.content['image_remote_urls'])
+        for i, url in enumerate(self.content['image_remote_urls']):
+            referer = url if self.info['is_staff'] else None
+            self.rich_content['images'].append(
+                ImgFetcher(url=url, referer=referer).fetch())
         self._images_loaded = True
         return self
 

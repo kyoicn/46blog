@@ -1,4 +1,3 @@
-from ConfigParser import ConfigParser
 from datetime import datetime
 import os
 
@@ -11,11 +10,14 @@ class LocalSaver:
     # File name for entry's plain text content.
     TEXT_CONTENT_FILENAME = 'text_content.txt'
 
-    def __init__(self, config = 'config.ini'):
+    def __init__(self, data_dir, verbose=0):
         try:
-            cp = ConfigParser()
-            cp.read(config)
-            self._data_dir = cp.get('General', 'data_dir') + '/'
+            self._data_dir = data_dir + '/'
+            self._verbose = verbose
+            if self._verbose > 0:
+                # TODO: log
+                print('[LocalSaver] Initialized')
+
         except Exception as e:
             # TODO: log.aterror
             print 'An error occurred while loading config: ' + str(e)

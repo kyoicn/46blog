@@ -8,7 +8,7 @@ class TwitterBot:
     """Just tweet!
     """
 
-    def __init__(self, config = 'config.ini'):
+    def __init__(self, config = 'config.ini', verbose=0):
         # TODO: load from config
         try:
             cp = ConfigParser()
@@ -20,6 +20,10 @@ class TwitterBot:
                 cp.get('General', 'twitter_access_token'),
                 cp.get('General', 'twitter_access_secret'))
             self._api = tweepy.API(self._auth)
+            self._verbose = verbose
+            self._idstr = 'TwitterBot'
+            if verbose > 0:
+                print('[{0}] Initialized')
         except Exception as e:
             # TODO: log.aterror
             print 'An error occurred while loading config: ' + str(e)
