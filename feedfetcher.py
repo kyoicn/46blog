@@ -107,7 +107,6 @@ class FeedFetcher:
             print 'New entry from: ' + entry.get_author()
 
             entry.load_images(self._verbose)
-            print('b')
 
             if self._localsaver.save(entry):
                 if not self._no_cache:
