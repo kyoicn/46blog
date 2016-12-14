@@ -79,7 +79,7 @@ if args.verbose > 2:
 
 if args.twitter:
     # TODO: pass in all args
-    twitter_bot = TwitterBot(args.config_file)
+    twitter_bot = TwitterBot(args.config_file, args.verbose)
     tweeted_file = open(cp.get('General', 'tweeted'), 'r+')
     tweeted = set(tweeted_file.read().split('\n'))
     if args.verbose > 2:

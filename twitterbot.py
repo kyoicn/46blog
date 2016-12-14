@@ -1,4 +1,5 @@
 # -*- coding: utf-8
+from __future__ import print_function
 from ConfigParser import ConfigParser
 import math
 import tweepy
@@ -23,20 +24,23 @@ class TwitterBot:
             self._verbose = verbose
             self._idstr = 'TwitterBot'
             if verbose > 0:
-                print('[{0}] Initialized')
+                print('[{0}] Initialized'.format(self._idstr))
         except Exception as e:
             # TODO: log.aterror
-            print 'An error occurred while loading config: ' + str(e)
+            print('An error occurred while loading config: {0}'.format(str(e)))
             raise
 
     """Tweeeeeeeeeet
     """
     def tweet(self, entry):
         tweets = self.prepare(entry)
-        # TODO: log.atfine
-        print 'Start tweeting ' + str(len(tweets)) + ' tweets:'
-        for tweet in tweets:
-            print(tweet)
+        for i in xrange(len(tweets)):
+            tweet = tweets[i]
+            if self._verbose > 0:
+                # TODO:log
+                print('  Tweeting {0}/{1}'.format(i, len(tweets)))
+            if self._verbose > 2:
+                print(tweet)
             self._api.update_status(
                 status = tweet["text"],
                 media_ids = tweet["image_ids"])
@@ -44,6 +48,8 @@ class TwitterBot:
     def prepare(self, entry):
         # Cannot include more than 4 images or 1 gif
         # return a list of prepared tweets, including text and pics
+        if self._verbose > 0:
+            print('  Filtering images...', end='')
         images_to_upload = filter(
             # TODO: handle oversize images
             lambda i: os.stat(i).st_size <= 3000000,
@@ -52,18 +58,25 @@ class TwitterBot:
                 filter(
                     lambda i: i.get_extension() != '.gif',
                     entry.get_images())))
-        print 'Uploading ' + str(len(images_to_upload)) + ' images'
+        if self._verbose > 0:
+            print('{0}[ok]'.format(str(len(images_to_upload))))
+            print(
+                '  Uploading {0} images...'.format(str(len(images_to_upload))),
+                end='')
         image_ids = map(
             lambda m: m.media_id,
             map(self._api.media_upload, images_to_upload))
+        if self._verbose > 0:
+            print('[ok]')
 
         tweets = []
         n = len(image_ids)
         count = int(math.ceil(1.0 * n / 4))
         idx = 1
         while n > 0:
-            print count
-            print idx
+            if self._verbose > 1:
+                print('  Preparing {0}/{1}...'.format(str(count), str(idx)),
+                      end='')
             tweet = {
                 "text": TwitterBot._format_text(entry, count, idx),
                 "image_ids": image_ids[(idx - 1) * 4:idx * 4]
@@ -71,6 +84,8 @@ class TwitterBot:
             tweets.append(tweet)
             n -= 4
             idx += 1
+            if self._verbose > 1:
+                print('[ok]')
 
         return tweets
 
