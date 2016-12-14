@@ -1,5 +1,6 @@
 from feedimage import FeedImage
 import mimetypes
+import re
 import urllib2
 import xml.etree.ElementTree as ET
 
@@ -58,9 +59,10 @@ class ImgFetcher:
         response = urllib2.urlopen(self._init_req, timeout = 60)
         cookie = response.info().getheader('Set-Cookie')
         
-        # TODO: update this
-        dom = ET.parse(response).getroot()
-        img_url = dom.iter('img').next().get('src')
+        # TODO: WORKAROUND!
+        img_url_pattern = (
+          r'http://dcimg\.awalker\.jp/img2\.php\?sec_key=[a-zA-Z0-9]*')
+        img_url = re.search(img_url_pattern, response.read()).group(0)
 
         req = urllib2.Request(img_url, headers = ImgFetcher.req_header)
         req.add_header('Referer', self._url)
