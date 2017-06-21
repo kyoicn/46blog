@@ -29,7 +29,7 @@ class FeedEntry:
             image_local_urls = {}
 
         # Basic info in plain text
-        print(author)
+        print(author + ":" + title)
         self.info = {
             'author': author.encode('utf8'),
             'is_staff': True if unicode(author) == u'運営スタッフ' else False,
@@ -72,6 +72,7 @@ class FeedEntry:
 
         # Status
         self._images_loaded = False
+        print 'Entry initialized'
 
     """Loads images locally or remotely"""
     # TODO: load images in parellel

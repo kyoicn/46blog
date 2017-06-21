@@ -96,6 +96,7 @@ class FeedFetcher:
         to_return = []
         added = 0
         for entry in self._parse_tree(cache_tmp):
+            print 'loop'
             # check if stored
             if (not self._no_cache and
                 entry.hashcode() in self._status['saved_entries']):
@@ -150,6 +151,8 @@ class FeedFetcher:
     def _parse_entry(self, entry, ns):
         author = entry.find(ns + 'author').find(ns + 'name').text
         title = entry.find(ns + 'title').text
+        if title == None:
+          title = ''
         publish_time = entry.find(ns + 'published').text
         permalink = entry.find(ns + 'link').get('href')
         
