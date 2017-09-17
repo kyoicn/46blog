@@ -52,7 +52,7 @@ class FeedFetcher:
         if self._verbose > 0:
             # TODO: log
             print('[FeedFetcher:{0}] Initialized'.format(feed_url))
-        
+
     """Fetches feeds and returns a list of fully loaded new FeedEntry"""
     def fetch(self,
               max_fetch = 0 # Number of entries to fetch,
@@ -67,7 +67,7 @@ class FeedFetcher:
             cache_tmp.close()
             print 'While fetching response: ' + str(e)
             return
-            
+
         # Compare file checksum with cached feed file, save to file if new
         # contents are available
         new_file_hashcode = self._get_file_hashcode(cache_tmp)
